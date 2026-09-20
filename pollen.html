@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>꽃가루 지도 · 지역별 꽃가루 알레르기 위험</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f6f0f6; --card:#ffffff; --ink:#2a2032; --muted:#6e6378; --line:#eadfe9;
+  --petal:#f4a7c0; --petal2:#ffd3e2; --leaf:#5f9a70; --gold:#f2c230; --link:#8a3f78;
+  --g0:#4f9d69; --g1:#c9a227; --g2:#e07a2f; --g3:#c43b4b;
+  --serif:"Gowun Batang","Noto Serif KR","Batang",serif;
+  --sans:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#191420; --card:#231c2c; --ink:#f1eaf5; --muted:#a99db5; --line:#352b41; --petal:#e88fb0; --link:#f0a6dc;
+        --g0:#5cb47b; --g1:#d8b53a; --g2:#ef8d43; --g3:#e0596a;}
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.65;-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit}
+a{color:var(--link)}
+:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px 56px;position:relative;z-index:1}
+#petals{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:50}
+svg.fl{display:inline-block;vertical-align:middle;flex:none}
+
+/* hero */
+.hero{position:relative;padding:44px 0 28px;overflow:hidden}
+.hero h1{font-family:var(--serif);font-size:clamp(2.4rem,7vw,3.8rem);line-height:1.1;margin:0;letter-spacing:-.02em}
+.hero .lead{margin:10px 0 0;font-size:1.05rem;max-width:34em}
+.hero .date{margin:0 0 6px;color:var(--muted);font-size:.95rem}
+.deco{position:absolute;pointer-events:none}
+.deco.a{right:-30px;top:-20px;width:190px;color:var(--petal);opacity:.55;transform:rotate(14deg)}
+.deco.b{right:120px;top:70px;width:84px;color:var(--petal2);opacity:.9;transform:rotate(-20deg)}
+.deco.c{right:30px;top:150px;width:54px;color:var(--petal);opacity:.75;transform:rotate(30deg)}
+@media (max-width:640px){.deco.a{width:130px;right:-30px}.deco.b{right:60px;top:50px;width:60px}.deco.c{display:none}}
+.chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:var(--card);border:1px solid var(--line);font-size:.92rem}
+.chip b{font-weight:700}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.chip.mask{background:color-mix(in srgb,var(--petal2) 55%,var(--card));border-color:var(--petal)}
+
+/* sections */
+section{margin-top:34px}
+h2{font-family:var(--serif);font-size:1.5rem;margin:0 0 14px;display:flex;align-items:center;gap:10px}
+h2 .fl{width:26px;height:26px;color:var(--petal)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px 22px}
+.tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:14px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--card)}
+.seg button{padding:7px 18px;border:0;background:none;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.btn{padding:7px 14px;border:1px solid var(--line);border-radius:999px;background:var(--card);cursor:pointer;font-size:.9rem}
+.btn:hover{border-color:var(--petal)}
+
+/* map + detail */
+.mapgrid{display:grid;grid-template-columns:minmax(280px,400px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:820px){.mapgrid{grid-template-columns:1fr}}
+.tilemap{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:70px;gap:6px}
+.tile{position:relative;text-align:left;padding:8px 10px;border-radius:12px;cursor:pointer;border:1px solid var(--line);border-left:6px solid var(--gc);background:color-mix(in srgb,var(--gc) 16%,var(--card));display:flex;flex-direction:column;justify-content:space-between}
+.tile .nm{font-weight:700;font-size:.92rem;line-height:1.2}
+.tile .sub{font-size:.75rem;color:var(--muted)}
+.tile .num{font-family:var(--serif);font-weight:700;font-size:1.15rem;line-height:1}
+.tile[aria-pressed="true"]{outline:3px solid var(--ink);outline-offset:1px}
+.tile .mine{position:absolute;top:6px;right:6px;width:18px;height:18px;color:var(--petal)}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;font-size:.82rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+
+.detail h3{font-family:var(--serif);font-size:1.6rem;margin:0;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.badge{font-family:var(--sans);font-size:.9rem;font-weight:700;padding:3px 12px;border-radius:999px;color:#fff;background:var(--gc)}
+.badge.dark{color:#231c00}
+.score{display:flex;align-items:baseline;gap:8px;margin:12px 0 8px}
+.score b{font-family:var(--serif);font-size:3.2rem;line-height:1}
+.score span{color:var(--muted)}
+.gauge{position:relative;height:10px;border-radius:5px;background:linear-gradient(90deg,var(--g0) 0 25%,var(--g1) 0 50%,var(--g2) 0 75%,var(--g3) 0)}
+.gauge i{position:absolute;top:-4px;width:18px;height:18px;margin-left:-9px;border-radius:50%;background:var(--card);border:3px solid var(--ink)}
+.gscale{display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);margin-top:6px}
+.facts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:18px 0}
+@media (max-width:520px){.facts{grid-template-columns:repeat(2,1fr)}}
+.facts div{border:1px solid var(--line);border-radius:12px;padding:8px 10px;font-size:.8rem;color:var(--muted)}
+.facts b{display:block;font-size:1.05rem;color:var(--ink)}
+.why{margin:0 0 12px}
+.advice{margin:0;padding:14px 16px;border-radius:12px;background:color-mix(in srgb,var(--gc) 14%,var(--card));border-left:5px solid var(--gc)}
+
+/* ranking */
+.rank{display:grid;gap:6px}
+.row{display:grid;grid-template-columns:78px 1fr 92px;gap:12px;align-items:center;padding:6px 8px;border-radius:10px;border:0;background:none;text-align:left;cursor:pointer;width:100%}
+.row:hover{background:color-mix(in srgb,var(--petal2) 30%,var(--card))}
+.row .bar{height:12px;border-radius:6px;background:var(--line);overflow:hidden}
+.row .bar i{display:block;height:100%;border-radius:6px;background:var(--gc)}
+.row .g{font-size:.85rem;text-align:right;color:var(--muted)}
+.row .g b{color:var(--ink)}
+
+/* prevention */
+.tips{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px}
+.tips .card{padding:18px 20px}
+.tips h3{font-family:var(--serif);font-size:1.15rem;margin:0 0 8px}
+.tips ul{margin:0;padding:0;list-style:none}
+.tips li{display:flex;gap:8px;padding:4px 0;font-size:.93rem}
+.tips li .fl{width:14px;height:14px;margin-top:6px;color:var(--petal)}
+.note{margin-top:14px;font-size:.9rem;color:var(--muted)}
+
+/* mask */
+.maskbox{display:grid;grid-template-columns:minmax(0,220px) 1fr;gap:26px;align-items:center;padding:30px 30px;border-radius:24px;border:2px solid var(--petal);background:linear-gradient(135deg,color-mix(in srgb,var(--petal2) 55%,var(--card)),var(--card));position:relative;overflow:hidden}
+@media (max-width:640px){.maskbox{grid-template-columns:1fr;padding:24px 20px}.maskbox svg.mask{max-width:180px;margin:0 auto}}
+.maskbox h2{font-size:1.9rem;margin:0 0 10px;display:block}
+.maskbox ul{margin:12px 0 0;padding:0;list-style:none}
+.maskbox li{display:flex;gap:8px;padding:3px 0}
+.maskbox li .fl{width:14px;height:14px;margin-top:7px;color:var(--petal)}
+.maskbox .deco{color:var(--petal);opacity:.5;right:-20px;bottom:-30px;width:130px;transform:rotate(20deg)}
+.state{padding:26px 0;text-align:center;color:var(--muted)}
+footer{margin-top:34px;font-size:.82rem;color:var(--muted);max-width:52em}
+footer p{margin:6px 0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="flower" viewBox="0 0 100 100">
+      <g fill="currentColor">
+        <ellipse cx="50" cy="24" rx="15" ry="23"/>
+        <ellipse cx="50" cy="24" rx="15" ry="23" transform="rotate(72 50 50)"/>
+        <ellipse cx="50" cy="24" rx="15" ry="23" transform="rotate(144 50 50)"/>
+        <ellipse cx="50" cy="24" rx="15" ry="23" transform="rotate(216 50 50)"/>
+        <ellipse cx="50" cy="24" rx="15" ry="23" transform="rotate(288 50 50)"/>
+      </g>
+      <circle cx="50" cy="50" r="9" fill="#f2c230"/>
+      <g fill="#c98f10"><circle cx="50" cy="40" r="1.8"/><circle cx="59" cy="47" r="1.8"/><circle cx="55" cy="58" r="1.8"/><circle cx="45" cy="58" r="1.8"/><circle cx="41" cy="47" r="1.8"/></g>
+    </symbol>
+  </defs>
+</svg>
+<canvas id="petals" aria-hidden="true"></canvas>
+
+<div class="wrap">
+  <header class="hero">
+    <svg class="fl deco a"><use href="#flower"/></svg>
+    <svg class="fl deco b"><use href="#flower"/></svg>
+    <svg class="fl deco c"><use href="#flower"/></svg>
+    <p class="date" id="date"></p>
+    <h1>꽃가루 지도</h1>
+    <p class="lead" id="season">지역별 꽃가루 알레르기 위험을 불러오는 중이에요.</p>
+    <div class="chips" id="chips">
+      <span class="chip mask"><svg class="fl" width="18" height="18"><use href="#flower"/></svg> 외출할 땐 마스크를 꼭 쓰세요</span>
+    </div>
+  </header>
+
+  <section aria-labelledby="h-map">
+    <h2 id="h-map"><svg class="fl"><use href="#flower"/></svg>우리 지역은 얼마나 심할까</h2>
+    <div class="tools">
+      <div class="seg" role="group" aria-label="날짜 선택">
+        <button id="d0" aria-pressed="true">오늘</button>
+        <button id="d1" aria-pressed="false">내일</button>
+      </div>
+      <button class="btn" id="loc">내 위치로 찾기</button>
+    </div>
+    <div class="mapgrid">
+      <div>
+        <div class="tilemap" id="tilemap"><div class="state" style="grid-column:1/-1">불러오는 중…</div></div>
+        <div class="legend">
+          <span><i class="dot" style="background:var(--g0)"></i>낮음</span>
+          <span><i class="dot" style="background:var(--g1)"></i>보통</span>
+          <span><i class="dot" style="background:var(--g2)"></i>높음</span>
+          <span><i class="dot" style="background:var(--g3)"></i>매우 높음</span>
+        </div>
+      </div>
+      <div class="card detail" id="detail" aria-live="polite"><div class="state">지역을 눌러 자세히 보세요.</div></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-rank">
+    <h2 id="h-rank"><svg class="fl"><use href="#flower"/></svg>지역별 순위</h2>
+    <div class="card"><div class="rank" id="rank"></div></div>
+  </section>
+
+  <section aria-labelledby="h-tips">
+    <h2 id="h-tips"><svg class="fl"><use href="#flower"/></svg>이렇게 예방하세요</h2>
+    <div class="tips">
+      <div class="card"><h3>나가기 전에</h3><ul>
+        <li><svg class="fl"><use href="#flower"/></svg><span>오늘 지역 지수를 확인해요. 높음 이상이면 외출 계획을 줄여요.</span></li>
+        <li><svg class="fl"><use href="#flower"/></svg><span>이른 아침과, 건조하고 바람 부는 낮에는 꽃가루가 많아요. 이 시간대 외출은 줄여요.</span></li>
+        <li><svg class="fl"><use href="#flower"/></svg><span>평소 먹는 알레르기 약이 있으면 챙겨요. 약은 의사·약사와 상의해서 써요.</span></li>
+      </ul></div>
+      <div class="card"><h3>밖에 있을 때</h3><ul>
+        <li><svg class="fl"><use href="#flower"/></svg><span>마스크를 코와 턱까지 덮어 써요.</span></li>
+        <li><svg class="fl"><use href="#flower"/></svg><span>안경이나 선글라스, 모자로 눈과 머리카락을 보호해요.</span></li>
+        <li><svg class="fl"><use href="#flower"/></svg><span>꽃가루가 달라붙기 쉬운 니트·털옷은 피해요.</span></li>
+        <li><svg class="fl"><use href="#flower"/></svg><span>풀밭·숲길 가까이는 피하고, 눈이나 코를 손으로 비비지 않아요.</span></li>
+      </ul></div>
+      <div class="card"><h3>집에 돌아와서</h3><ul>
+        <li><svg class="fl"><use href="#flower"/></svg><span>현관에서 옷과 가방을 털고 들어와요.</span></li>
+        <li><svg class="fl"><use href="#flower"/></svg><span>손과 얼굴을 씻고, 저녁에는 머리도 감아요.</span></li>
+        <li><svg class="fl"><use href="#flower"/></svg><span>식염수로 코 안을 씻어내면 도움이 돼요.</span></li>
+        <li><svg class="fl"><use href="#flower"/></svg><span>입었던 겉옷은 침실 밖에 걸어 둬요.</span></li>
+      </ul></div>
+      <div class="card"><h3>집 안에서</h3><ul>
+        <li><svg class="fl"><use href="#flower"/></svg><span>꽃가루가 많은 날은 창문을 닫아요. 환기는 비 온 뒤나 짧게 해요.</span></li>
+        <li><svg class="fl"><use href="#flower"/></svg><span>빨래는 실내에서 말려요.</span></li>
+        <li><svg class="fl"><use href="#flower"/></svg><span>공기청정기(HEPA 필터)를 쓰고, 침구는 자주 빨아요.</span></li>
+        <li><svg class="fl"><use href="#flower"/></svg><span>차 안에서는 에어컨을 내기순환(재순환) 모드로 해요.</span></li>
+      </ul></div>
+    </div>
+    <p class="note">이런 때는 병원에 가요: 숨이 차거나 쌕쌕거릴 때, 눈이 심하게 붓거나 충혈될 때, 증상이 2주 넘게 이어지거나 잠을 못 잘 정도일 때. 꽃가루 알레르기는 해마다 반복되면 알레르기 검사와 면역치료를 의사와 상의해 볼 수 있어요.</p>
+  </section>
+
+  <section aria-labelledby="h-mask">
+    <div class="maskbox">
+      <svg class="fl deco"><use href="#flower"/></svg>
+      <svg class="mask" viewBox="0 0 220 160" role="img" aria-label="마스크 그림">
+        <path d="M32 62c-18 0-22 34-6 44" fill="none" stroke="#9a8ba8" stroke-width="5" stroke-linecap="round"/>
+        <path d="M188 62c18 0 22 34 6 44" fill="none" stroke="#9a8ba8" stroke-width="5" stroke-linecap="round"/>
+        <path d="M40 48c40-16 100-16 140 0v40c0 34-42 50-70 50s-70-16-70-50z" fill="#ffffff" stroke="#8a7d99" stroke-width="4" stroke-linejoin="round"/>
+        <path d="M46 78c42 10 86 10 128 0M50 100c40 10 80 10 120 0" fill="none" stroke="#d9cfe2" stroke-width="4" stroke-linecap="round"/>
+        <path d="M84 49c17-5 35-5 52 0" fill="none" stroke="#8a7d99" stroke-width="5" stroke-linecap="round"/>
+      </svg>
+      <div>
+        <h2>마지막으로, 마스크를 꼭 쓰세요</h2>
+        <p style="margin:0">꽃가루가 많은 날뿐 아니라 ‘보통’인 날에도, 알레르기가 있다면 마스크는 가장 손쉬운 방패예요.</p>
+        <ul>
+          <li><svg class="fl"><use href="#flower"/></svg><span>코와 턱까지 덮고, 코 부분의 철심을 눌러 틈이 없게 써요.</span></li>
+          <li><svg class="fl"><use href="#flower"/></svg><span>KF80·KF94 표시가 있는 보건용 마스크가 꽃가루를 더 잘 막아요.</span></li>
+          <li><svg class="fl"><use href="#flower"/></svg><span>젖거나 더러워지면 바로 새 마스크로 바꿔요.</span></li>
+          <li><svg class="fl"><use href="#flower"/></svg><span>눈으로도 꽃가루가 들어오니 안경이나 선글라스도 함께 써요.</span></li>
+          <li><svg class="fl"><use href="#flower"/></svg><span>숨쉬기 힘들면 무리하지 말고 안전한 곳에서 잠시 벗고 쉬세요.</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p><b>이 지수는 어떻게 만들었나요?</b> 지금 시기의 꽃가루 양(계절 경향)에 오늘·내일의 기온, 습도, 바람, 비를 곱해 만든 <b>추정치</b>예요. 건조하고 바람이 불면 꽃가루가 더 잘 날리고, 비가 오면 씻겨 내려간다는 원리를 썼어요. 실제로 측정한 꽃가루 농도가 아니고, 지역별 나무·풀 분포 차이는 반영하지 못해요.</p>
+    <p>공식 정보는 <a href="https://www.weather.go.kr" target="_blank" rel="noopener noreferrer">기상청 날씨누리</a>의 꽃가루농도위험지수를 확인하세요(참나무·소나무 봄철, 잡초류 가을철 제공).</p>
+    <p>날씨 데이터: Open-Meteo. 광주와 전남은 2026년 7월 통합된 행정구역에 맞춰 하나로 묶었고 광주 기준으로 계산했어요. 이 페이지는 건강 진단이나 치료를 대신하지 않아요.</p>
+  </footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+const $ = s => document.querySelector(s);
+function el(tag, attrs, text){
+  const e = document.createElement(tag);
+  if(attrs) for(const k in attrs) e.setAttribute(k, attrs[k]);
+  if(text!=null) e.textContent = text;
+  return e;
+}
+const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+const avg = a => a.reduce((x,y)=>x+y,0)/a.length;
+async function getJSON(url, ms){
+  const c = new AbortController(); const t = setTimeout(()=>c.abort(), ms||12000);
+  try{ const r = await fetch(url,{signal:c.signal}); if(!r.ok) throw new Error("HTTP "+r.status); return await r.json(); }
+  finally{ clearTimeout(t); }
+}
+
+/* ---------- regions (tile map: c=column, r=row) ---------- */
+const REGIONS = [
+  {id:"gyeonggi", name:"경기", lat:37.2636, lon:127.0286, c:1, r:0},
+  {id:"gangwon",  name:"강원", lat:37.8813, lon:127.7298, c:2, r:0},
+  {id:"incheon",  name:"인천", lat:37.4563, lon:126.7052, c:0, r:1},
+  {id:"seoul",    name:"서울", lat:37.5665, lon:126.9780, c:1, r:1},
+  {id:"chungnam", name:"충남", lat:36.6013, lon:126.6608, c:0, r:2},
+  {id:"sejong",   name:"세종", lat:36.4800, lon:127.2890, c:1, r:2},
+  {id:"chungbuk", name:"충북", lat:36.6424, lon:127.4890, c:2, r:2},
+  {id:"gyeongbuk",name:"경북", lat:36.5684, lon:128.7294, c:3, r:2},
+  {id:"jeonbuk",  name:"전북", lat:35.8242, lon:127.1480, c:0, r:3},
+  {id:"daejeon",  name:"대전", lat:36.3504, lon:127.3845, c:1, r:3},
+  {id:"daegu",    name:"대구", lat:35.8714, lon:128.6014, c:3, r:3},
+  {id:"gwangju",  name:"광주·전남", lat:35.1595, lon:126.8526, c:0, r:4, span:2},
+  {id:"gyeongnam",name:"경남", lat:35.2280, lon:128.6811, c:2, r:4},
+  {id:"ulsan",    name:"울산", lat:35.5384, lon:129.3114, c:3, r:4},
+  {id:"busan",    name:"부산", lat:35.1796, lon:129.0756, c:3, r:5},
+  {id:"jeju",     name:"제주", lat:33.4996, lon:126.5312, c:0, r:6}
+];
+const GRADES = [
+  {name:"낮음",     cut:25,  v:"--g0", dark:false, adv:"꽃가루 걱정은 크지 않아요. 그래도 알레르기가 잘 생기는 분은 평소처럼 마스크를 챙기세요."},
+  {name:"보통",     cut:50,  v:"--g1", dark:true,  adv:"민감한 분은 증상이 나올 수 있어요. 외출할 때 마스크와 안경을 쓰고, 돌아오면 손과 얼굴을 씻으세요."},
+  {name:"높음",     cut:75,  v:"--g2", dark:false, adv:"알레르기가 있는 사람은 대개 증상이 나타나는 단계예요. 외출을 줄이고, 나갈 때는 마스크·안경·모자를 꼭 쓰세요."},
+  {name:"매우 높음", cut:101, v:"--g3", dark:false, adv:"가급적 외출을 자제하고 창문을 닫으세요. 꼭 나가야 하면 마스크와 보안경을 쓰고, 다녀온 뒤에는 옷을 털고 샤워하세요."}
+];
+const gradeOf = v => GRADES.find(g=>v<g.cut);
+const gvar = v => "var("+gradeOf(v).v+")";
+
+/* ---------- seasonal base level (national trend, 0~1) ---------- */
+// 각 달 15일 기준의 꽃가루 양 경향: 봄(나무: 참나무·소나무 등)과 가을(잡초류: 쑥·환삼덩굴·돼지풀 등)에 많아요.
+const BASE = [.04,.08,.30,.80,.90,.45,.15,.50,.85,.55,.12,.04];
+function baseFor(date){
+  const t = date.getMonth() + (date.getDate()-15)/30;
+  const i0 = Math.floor(t), f = t - i0;
+  const a = BASE[((i0%12)+12)%12], b = BASE[(((i0+1)%12)+12)%12];
+  return a + (b-a)*f;
+}
+function seasonText(m){
+  if(m===2) return "이른 봄이라 오리나무 같은 나무 꽃가루가 날리기 시작하는 때예요.";
+  if(m===3||m===4) return "참나무·소나무 같은 나무 꽃가루가 가장 많이 날리는 철이에요.";
+  if(m===5) return "나무 꽃가루가 잦아드는 때예요. 소나무 꽃가루는 아직 남아 있어요.";
+  if(m===6) return "꽃가루가 비교적 적은 시기예요.";
+  if(m>=7&&m<=9) return "쑥·환삼덩굴·돼지풀 같은 잡초류 꽃가루의 철이에요.";
+  return "꽃가루가 적은 시기라 지수가 대체로 낮게 나와요.";
+}
+
+/* ---------- index calculation ---------- */
+function compute(h, di, date){
+  const s = di*24, all = [], day = [];
+  for(let k=0;k<24;k++) all.push(s+k);
+  for(let k=8;k<18;k++) day.push(s+k);
+  const num = (arr,i)=> (arr[i]==null ? 0 : arr[i]);
+  const wind = avg(day.map(i=>num(h.wind_speed_10m,i)));
+  const rh   = avg(day.map(i=>num(h.relative_humidity_2m,i)));
+  const rain = all.reduce((x,i)=>x+num(h.precipitation,i),0);
+  const tmax = Math.max.apply(null, all.map(i=>num(h.temperature_2m,i)));
+  const base = baseFor(date);
+  const fw = clamp(.6 + wind*.09, .6, 1.25);
+  const fh = clamp(1.25 - (rh-35)*.013, .6, 1.25);
+  const fr = rain < .2 ? 1 : Math.max(.2, .75 - rain*.1);
+  const ft = clamp((tmax-3)/20, .45, 1.1);
+  const idx = Math.round(clamp(base*fw*fh*fr*ft/1.2*100, 0, 100));
+  return {idx:idx, wind:wind, rh:rh, rain:rain, tmax:tmax, base:base};
+}
+function reason(x){
+  if(x.base < .2) return "지금은 꽃가루가 많은 철이 아니라서 지수가 낮아요.";
+  if(x.rain >= 1) return "비가 내려 공기 중의 꽃가루가 씻겨 내려가요.";
+  if(x.rh < 55 && x.wind >= 3) return "건조하고 바람이 불어 꽃가루가 멀리 퍼지기 쉬운 날씨예요.";
+  if(x.wind >= 5) return "바람이 강해 꽃가루가 넓게 퍼질 수 있어요.";
+  if(x.rh >= 80) return "습도가 높아 꽃가루가 덜 날리는 날씨예요.";
+  if(x.rh < 55) return "공기가 건조해 꽃가루가 잘 날리는 날씨예요.";
+  return "꽃가루가 날리기에 무난한 날씨예요.";
+}
+
+/* ---------- state ---------- */
+let data = null;       // {dates:[d0,d1], res:[{region, days:[calc0,calc1]}]}
+let day = 0, sel = "seoul", mine = null;
+
+async function load(){
+  $("#tilemap").replaceChildren(el("div",{class:"state",style:"grid-column:1/-1"},"불러오는 중…"));
+  const lat = REGIONS.map(r=>r.lat).join(","), lon = REGIONS.map(r=>r.lon).join(",");
+  const url = "https://api.open-meteo.com/v1/forecast?latitude="+lat+"&longitude="+lon+
+    "&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m,precipitation&timezone=Asia%2FSeoul&forecast_days=2&wind_speed_unit=ms";
+  try{
+    let d = await getJSON(url, 15000);
+    if(!Array.isArray(d)) d = [d];
+    const t0 = d[0].hourly.time[0].slice(0,10).split("-").map(Number);
+    const d0 = new Date(t0[0], t0[1]-1, t0[2]);
+    const d1 = new Date(t0[0], t0[1]-1, t0[2]+1);
+    data = {dates:[d0,d1], res: REGIONS.map((r,i)=>({region:r, days:[compute(d[i].hourly,0,d0), compute(d[i].hourly,1,d1)]}))};
+    renderAll();
+  }catch(e){
+    const box = el("div",{class:"state",style:"grid-column:1/-1"},"날씨 정보를 가져오지 못했어요. 인터넷 연결을 확인하고 ");
+    const b = el("button",{class:"btn",type:"button"},"다시 시도"); b.addEventListener("click", load);
+    box.appendChild(b); $("#tilemap").replaceChildren(box);
+  }
+}
+
+/* ---------- render ---------- */
+function renderAll(){
+  const d = data.dates[day];
+  $("#date").textContent = new Intl.DateTimeFormat("ko-KR",{year:"numeric",month:"long",day:"numeric",weekday:"long"}).format(d) + (day===1?" (내일)":"");
+  $("#season").textContent = seasonText(d.getMonth()+1);
+  renderChips(); renderMap(); renderDetail(); renderRank();
+  Petals.setWind(avg(data.res.map(x=>x.days[day].wind)));
+}
+function renderChips(){
+  const box = $("#chips"); const keep = box.querySelector(".mask");
+  box.replaceChildren();
+  const list = data.res.map(x=>({n:x.region.name, v:x.days[day].idx}));
+  const mean = Math.round(avg(list.map(x=>x.v)));
+  const hi = list.reduce((a,b)=>b.v>a.v?b:a), lo = list.reduce((a,b)=>b.v<a.v?b:a);
+  function chip(label, name, v){
+    const c = el("span",{class:"chip"});
+    const dot = el("i",{class:"dot"}); dot.style.background = gvar(v);
+    c.appendChild(dot); c.appendChild(document.createTextNode(label+" ")); c.appendChild(el("b",null,name+" "+gradeOf(v).name));
+    return c;
+  }
+  const avgChip = el("span",{class:"chip"}); const dt = el("i",{class:"dot"}); dt.style.background = gvar(mean);
+  avgChip.appendChild(dt); avgChip.appendChild(document.createTextNode("전국 평균 ")); avgChip.appendChild(el("b",null,gradeOf(mean).name+" ("+mean+")"));
+  box.appendChild(avgChip);
+  box.appendChild(chip("가장 높은 곳", hi.n+" ("+hi.v+")", hi.v));
+  box.appendChild(chip("가장 낮은 곳", lo.n+" ("+lo.v+")", lo.v));
+  box.appendChild(keep);
+  document.title = "꽃가루 지도 · 전국 평균 "+gradeOf(mean).name;
+}
+function renderMap(){
+  const map = $("#tilemap"); map.replaceChildren();
+  data.res.forEach(x=>{
+    const r = x.region, c = x.days[day], g = gradeOf(c.idx);
+    const b = el("button",{class:"tile",type:"button","aria-pressed":String(r.id===sel),
+      "aria-label":r.name+" 꽃가루 지수 "+c.idx+", "+g.name});
+    b.style.gridColumn = String(r.c+1);
+    b.style.gridRow = (r.r+1) + (r.span? " / span "+r.span : "");
+    b.style.setProperty("--gc","var("+g.v+")");
+    b.appendChild(el("span",{class:"nm"}, r.name));
+    const bot = el("span"); bot.appendChild(el("span",{class:"num"}, String(c.idx))); bot.appendChild(el("div",{class:"sub"}, g.name));
+    b.appendChild(bot);
+    if(r.id===mine){ const f = document.createElementNS("http://www.w3.org/2000/svg","svg"); f.setAttribute("class","fl mine");
+      const u = document.createElementNS("http://www.w3.org/2000/svg","use"); u.setAttribute("href","#flower"); f.appendChild(u); b.appendChild(f); b.title = "내 지역"; }
+    b.addEventListener("click",()=>{ sel = r.id; renderMap(); renderDetail(); });
+    map.appendChild(b);
+  });
+}
+function renderDetail(){
+  const x = data.res.find(v=>v.region.id===sel) || data.res[0];
+  const c = x.days[day], g = gradeOf(c.idx);
+  const box = $("#detail"); box.replaceChildren();
+  box.style.setProperty("--gc","var("+g.v+")");
+  const h = el("h3",null, x.region.name);
+  const bd = el("span",{class:"badge"+(g.dark?" dark":"")}, g.name); bd.style.setProperty("--gc","var("+g.v+")");
+  h.appendChild(bd);
+  if(x.region.id===mine) h.appendChild(el("span",{class:"sub",style:"font-size:.85rem;color:var(--muted);font-family:var(--sans)"},"내 지역"));
+  box.appendChild(h);
+  const sc = el("div",{class:"score"}); sc.appendChild(el("b",null,String(c.idx))); sc.appendChild(el("span",null,"/ 100  꽃가루 위험 지수(추정)"));
+  box.appendChild(sc);
+  const ga = el("div",{class:"gauge"}); const mk = el("i"); mk.style.left = clamp(c.idx,1,99)+"%"; ga.appendChild(mk); box.appendChild(ga);
+  const sc2 = el("div",{class:"gscale"}); ["낮음","보통","높음","매우 높음"].forEach(t=>sc2.appendChild(el("span",null,t))); box.appendChild(sc2);
+  const f = el("div",{class:"facts"});
+  [["바람(낮 평균)",c.wind.toFixed(1)+" m/s"],["습도(낮 평균)",Math.round(c.rh)+"%"],["예상 비",c.rain<.1?"없음":c.rain.toFixed(1)+" mm"],["최고 기온",Math.round(c.tmax)+"°"]].forEach(p=>{
+    const d = el("div"); d.appendChild(el("b",null,p[1])); d.appendChild(document.createTextNode(p[0])); f.appendChild(d);
+  });
+  box.appendChild(f);
+  box.appendChild(el("p",{class:"why"}, reason(c)));
+  box.appendChild(el("p",{class:"advice"}, g.adv));
+}
+function renderRank(){
+  const box = $("#rank"); box.replaceChildren();
+  data.res.slice().sort((a,b)=>b.days[day].idx-a.days[day].idx).forEach(x=>{
+    const c = x.days[day], g = gradeOf(c.idx);
+    const row = el("button",{class:"row",type:"button"});
+    row.style.setProperty("--gc","var("+g.v+")");
+    row.appendChild(el("span",null,x.region.name + (x.region.id===mine?" ✿":"")));
+    const bar = el("span",{class:"bar"}); const i = el("i"); i.style.width = Math.max(c.idx,3)+"%"; bar.appendChild(i); row.appendChild(bar);
+    const gg = el("span",{class:"g"}); gg.appendChild(el("b",null,String(c.idx))); gg.appendChild(document.createTextNode(" "+g.name)); row.appendChild(gg);
+    row.addEventListener("click",()=>{ sel = x.region.id; renderMap(); renderDetail(); $("#h-map").scrollIntoView({behavior:"smooth",block:"start"}); });
+    box.appendChild(row);
+  });
+}
+
+/* ---------- day tabs ---------- */
+[0,1].forEach(n=>$("#d"+n).addEventListener("click",()=>{
+  day = n; $("#d0").setAttribute("aria-pressed",String(n===0)); $("#d1").setAttribute("aria-pressed",String(n===1));
+  if(data) renderAll();
+}));
+
+/* ---------- my location ---------- */
+function dist(a,b,c,d){ const R=6371,p=Math.PI/180,x=(c-a)*p,y=(d-b)*p*Math.cos((a+c)/2*p); return Math.sqrt(x*x+y*y)*R; }
+function nearest(lat,lon){
+  let best=null,bd=1e9; REGIONS.forEach(r=>{ const d=dist(lat,lon,r.lat,r.lon); if(d<bd){bd=d;best=r;} });
+  return bd<120 ? best : null;
+}
+function gps(){ return new Promise((res,rej)=>{ if(!navigator.geolocation) return rej(new Error("nogeo"));
+  navigator.geolocation.getCurrentPosition(p=>res({lat:p.coords.latitude,lon:p.coords.longitude}),rej,{timeout:8000,maximumAge:600000}); }); }
+async function byIP(){ const d = await getJSON("https://api.bigdatacloud.net/data/reverse-geocode-client?localityLanguage=ko", 8000);
+  if(d.latitude==null) throw new Error("noip"); return {lat:d.latitude,lon:d.longitude}; }
+function setMine(r){ if(!r) return false; mine = r.id; sel = r.id; if(data){ renderMap(); renderDetail(); renderRank(); } return true; }
+$("#loc").addEventListener("click", async ()=>{
+  const b = $("#loc"); b.disabled = true; b.textContent = "찾는 중…";
+  let p; try{ p = await gps(); }catch(e){ try{ p = await byIP(); }catch(e2){ p = null; } }
+  const ok = p && setMine(nearest(p.lat,p.lon));
+  if(!ok) alert("가까운 지역을 찾지 못했어요. 지도에서 직접 눌러 보세요.");
+  b.disabled = false; b.textContent = "내 위치로 찾기";
+});
+
+/* ---------- falling petals (whole page) ---------- */
+const Petals = (function(){
+  const cv = $("#petals"), ctx = cv.getContext("2d");
+  const reduce = !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+  const COL = ["#ffc9d9","#ffb5ca","#ffdde8","#ffa9c2","#f9bfd2"];
+  let W=0,H=0,wind=2,list=[],raf=0,last=0;
+  const rnd=(a,b)=>a+Math.random()*(b-a);
+  function make(anywhere){
+    return {x:anywhere?rnd(-40,W):rnd(-40,W), y:anywhere?rnd(-20,H):-20, s:rnd(5,10), rot:rnd(0,6.28), vr:rnd(-.05,.05),
+      ph:rnd(0,6.28), fl:rnd(0,6.28), vy:rnd(0,.6), k:rnd(.7,1.3), o:rnd(.55,.95), c:COL[(Math.random()*COL.length)|0]};
+  }
+  function resize(){
+    const dpr = Math.min(window.devicePixelRatio||1,2);
+    W = window.innerWidth; H = window.innerHeight;
+    cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr); ctx.setTransform(dpr,0,0,dpr,0,0);
+    const n = Math.round(clamp(W/32, 14, 44));
+    list = []; for(let i=0;i<n;i++) list.push(make(true));
+    if(reduce) draw(0);
+  }
+  function shape(s){
+    ctx.beginPath(); ctx.moveTo(0,-s*.85);
+    ctx.bezierCurveTo(s*.9,-s*1.15, s*.95,s*.3, 0,s);
+    ctx.bezierCurveTo(-s*.95,s*.3, -s*.9,-s*1.15, 0,-s*.85); ctx.closePath();
+  }
+  function draw(dt){
+    ctx.clearRect(0,0,W,H);
+    list.forEach(p=>{
+      p.ph+=.03*dt; p.fl+=.045*dt; p.rot+=p.vr*dt;
+      p.x += (.35+wind*.22 + Math.sin(p.ph)*.6)*dt*p.k;
+      p.y += (.55+p.vy + Math.cos(p.ph*.7)*.25)*dt;
+      if(p.y>H+20 || p.x>W+30){ if(Math.random()<.5){ p.x=rnd(-40,W); p.y=-20; } else { p.x=-20; p.y=rnd(-20,H*.6); } }
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot); ctx.scale(.7,.3+.7*Math.abs(Math.cos(p.fl)));
+      ctx.globalAlpha=p.o; ctx.fillStyle=p.c; shape(p.s); ctx.fill(); ctx.restore();
+    });
+  }
+  function frame(t){ raf=requestAnimationFrame(frame); const dt=Math.min(Math.max((t-last)/16.67,0),3)||1; last=t; draw(dt); }
+  window.addEventListener("resize", resize);
+  resize();
+  if(!reduce){ last=performance.now(); raf=requestAnimationFrame(frame); }
+  return {setWind:function(w){ wind = clamp(w,0,10); }};
+})();
+
+/* ---------- init ---------- */
+load().then(function(){
+  // 조용히 대략적인 위치(IP)로 내 지역을 찾아 표시해요. 정확한 위치는 ‘내 위치로 찾기’ 버튼을 누르세요.
+  byIP().then(p=>setMine(nearest(p.lat,p.lon))).catch(function(){});
+});
+})();
+</script>
+</body>
+</html>
